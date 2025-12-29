@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Industry Specific - Mock Test</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      background-size: cover;
+      overflow: hidden;
+    }
+
+    .card {
+      width: 90%;
+      max-width: 360px;
+      padding: 25px;
+      border-radius: 15px;
+      background: #fff;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      text-align: center;
+      animation: fadeIn 1s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      font-weight: 600;
+      font-size: 1.5rem;
+      color: #333;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 15px;
+      box-sizing: border-box;
+    }
+
+    input:focus {
+      border-color: #6a11cb;
+      outline: none;
+      box-shadow: 0 0 6px rgba(106,17,203,0.3);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(45deg, #ff512f, #dd2476);
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    #msg {
+      margin-top: 12px;
+      font-weight: bold;
+      color: #e63946;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>KCET - Department of ECE </h2>
+    <h2>🏭 Industry Specific </h2>
+    <h2> 📝 Mock Test </h2>
+    <input id="username" placeholder="Mail ID (Eg. 23uec001@kamarajengg.edu.in)" autocomplete="off" />
+    <input id="password" type="password" placeholder="MockTest" />
+    <button onclick="login()">Login</button>
+    <p id="msg"></p>
+    <!-- Review button hidden by default -->
+    <button id="reviewBtn" style="display:none; margin-top:15px;">View My Responses</button>
+  </div>
+
+<script>
+const scriptURL = "https://script.google.com/macros/s/AKfycbwC9V02YbNUFf-0oN_Ku7fvf2LxD6M8XjoO9QZCAG2IDNxyPVBLGXUzeXdrIkpoy9Uv0Q/exec";
+
+async function login() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const msgBox = document.getElementById('msg');
+  msgBox.textContent = "";
+
+  if (!username || !password) {
+    msgBox.textContent = "⚠ Please enter both username & password.";
+    return;
+  }
+
+  try {
+    const res = await fetch(scriptURL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'login', username, password })
+    });
+    const data = await res.json();
+    console.log("Login response:", data);
+
+    if (data.status === 'blocked') {
+      msgBox.style.color = "#ff0000";
+      msgBox.textContent = data.message || "⚠ You have already submitted the test.";
+      return; // stop login
+    }
+
+    if (data.status === 'success') {
+  const userObj = {
+    username: username,
+    name: data.name,
+    dept: data.dept,
+    role: data.role
+  };
+  localStorage.setItem('user', JSON.stringify(userObj));
+  msgBox.style.color = "#00ff00";
+  msgBox.textContent = "✅ Login Successful! Redirecting...";
+
+  setTimeout(async () => {
+    if (data.role === 'Admin') {
+      window.location.href = 'admin.html';
+    } else {
+      // 🔍 Check if already submitted result
+      try {
+        const res2 = await fetch(scriptURL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'getUserResult', username })
+        });
+        const reviewData = await res2.json();
+
+        if (!reviewData.error) {
+          // ✅ Already submitted & review enabled
+          window.location.href = 'review.html';
+        } else {
+          // ✅ Not submitted yet → go to instructions
+          window.location.href = 'instructions.html';
+        }
+      } catch (err) {
+        console.error("Check review error:", err);
+        window.location.href = 'instructions.html';
+      }
+    }
+  }, 1000);
+    } else {
+      msgBox.style.color = "#ffdddd";
+      msgBox.textContent = "❌ Invalid login credentials!";
+    }
+  } catch (err) {
+    console.error("Login error:", err);
+    msgBox.style.color = "#ffdddd";
+    msgBox.textContent = "⚠ Server error. Try again.";
+  }
+}
+
+// Review button click
+document.getElementById("reviewBtn").addEventListener("click", () => {
+  window.location.href = "review.html";
+});
+</script>
+</body>
+</html>
+
+
+
+
+
+

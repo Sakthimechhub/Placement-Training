@@ -1,0 +1,321 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Panel</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(270deg, #ff9a9e, #fad0c4, #a1c4fd, #c2e9fb);
+      background-size: 800% 800%;
+      animation: gradientBG 15s ease infinite;
+      color: #333;
+    }
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    header {
+      background: linear-gradient(90deg, #4a47a3, #6a5acd);
+      color: #fff;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    header h2 { margin: 0; font-size: 2rem; }
+    header nav a { color: #fff; margin: 0 12px; text-decoration: none; }
+    header nav a:hover { color: #ffe66d; }
+    main { padding: 20px; max-width: 900px; margin: auto; }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      margin: 20px auto;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+      animation: fadeIn 0.7s ease;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+    input { width: 95%; padding: 12px; margin: 6px 0; border: 2px solid #ddd; border-radius: 8px; }
+    input:focus { border-color: #6a5acd; outline: none; }
+    .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); }
+    button {
+      background: linear-gradient(90deg, #6a5acd, #836fff);
+      color: #fff; border: none; padding: 12px 20px;
+      border-radius: 8px; font-size: 15px; cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    button:hover { background: linear-gradient(90deg, #483d8b, #6a5acd); transform: translateY(-3px); }
+    img { max-width: 200px; margin-top: 10px; border-radius: 6px; }
+    ul { margin: 0; padding-left: 18px; }
+    .nav { text-align: center; margin-top: 15px; }
+    .nav button { margin: 0 10px; }
+  </style>
+</head>
+<body onload="checkAccess()">
+  <header>
+    <h2>Admin Panel</h2>
+    <nav>
+      <a href="index.html">Logout</a>
+    </nav>
+  </header> 
+
+  <main>
+    <div class="card">
+      <h3>➕ Add New Question</h3>
+      <input id="question" placeholder="Question (LaTeX allowed like $E=mc^2$)" />
+       <div class="grid" style="grid-template-columns: repeat(2, 1fr); gap:10px;">
+        <input id="optA" placeholder="Option A" />
+        <input id="optB" placeholder="Option B" />
+        <input id="optC" placeholder="Option C" />
+        <input id="optD" placeholder="Option D" />
+      </div>
+      <input id="correct" placeholder="CorrectText (must match one option exactly)" />
+      <input id="dept" placeholder="Department (e.g., CSE, ECE)" />
+      <input id="img" placeholder="Image URL (optional)" />
+      <button onclick="addQuestion()">Add Question</button>
+    </div>
+
+    <!-- 🔹 Department Student Stats -->
+<div class="card">
+  <h3>Department-wise Students Stats</h3>
+  <div id="deptStats" class="grid"></div>
+</div>
+
+
+    <!-- 🔹 Department Results Summary -->
+    <div class="card">
+      <h3>Department-wise Results Summary</h3>
+      <div id="resultsSummary" class="grid"></div>
+    </div>
+
+    <div class="card" id="downloadSection" style="display:none;text-align:center">
+      <h4 id="selectedDept"></h4>
+      <button onclick="downloadDeptResults()">⬇ Download Result</button>
+    </div>
+    
+        <!-- 🔹 Department Summary Section -->
+    <div class="card">
+      <h3>Department-wise Question Summary</h3>
+      <div id="deptSummary" class="grid"></div>
+    </div>
+    
+    <h3>All Questions</h3>
+    <div id="qContainer" class="card"></div>
+    <div class="nav">
+      <button onclick="prevQuestion()">⬅ Prev</button>
+      <button onclick="nextQuestion()">Next ➡</button>
+    </div>
+  </main>
+<script>
+const scriptURL = "https://script.google.com/macros/s/AKfycbwC9V02YbNUFf-0oN_Ku7fvf2LxD6M8XjoO9QZCAG2IDNxyPVBLGXUzeXdrIkpoy9Uv0Q/exec";
+
+function checkAccess() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  if (user.role !== 'Admin') {
+    alert('Access Denied!');
+    window.location.href = 'index.html';
+  } else {
+    fetchQuestions();
+    fetchResults();
+    fetchDeptStats();  
+  }
+}
+
+async function addQuestion() {
+  const data = {
+    action: 'addQuestion',
+    question: document.getElementById('question').value.trim(),
+    optA: document.getElementById('optA').value.trim(),
+    optB: document.getElementById('optB').value.trim(),
+    optC: document.getElementById('optC').value.trim(),
+    optD: document.getElementById('optD').value.trim(),
+    correct: document.getElementById('correct').value.trim(),
+    dept: document.getElementById('dept').value.trim(),
+    img: document.getElementById('img').value.trim()
+  };
+  if (!data.question || !data.optA || !data.optB || !data.optC || !data.optD || !data.correct || !data.dept) {
+    alert('⚠️ Fill all fields except Image URL (optional).');
+    return;
+  }
+  await fetch(scriptURL, { method:'POST', body: JSON.stringify(data) });
+  alert('✅ Question Added Successfully!');
+  document.querySelectorAll('input').forEach(i => i.value = '');
+  fetchQuestions();
+}
+
+async function fetchDeptStats() {
+  const res = await fetch(scriptURL, { 
+    method:'POST', 
+    body: JSON.stringify({ action:'getDeptAttendanceStats' }) 
+  });
+  const data = await res.json();
+  const stats = data.stats || {};
+  renderDeptStats(stats);
+}
+
+function renderDeptStats(statsObj) {
+  if (!statsObj || Object.keys(statsObj).length === 0) {
+    document.getElementById('deptStats').innerHTML = "<p>No data yet.</p>";
+    return;
+  }
+
+  let html = "";
+  Object.keys(statsObj).forEach(dept => {
+    const s = statsObj[dept];
+    const percent = s.total > 0 ? Math.round((s.attended / s.total) * 100) : 0;
+
+    html += `
+      <div class="card" style="padding:15px;text-align:center;background:#f9f9ff;">
+        <h4>${dept}</h4>
+        <p>Total Students: <b>${s.total}</b></p>
+        <p>Attended: <b>${s.attended}</b></p>
+        <p>Attendance %: <b>${percent}%</b></p>
+      </div>
+    `;
+  });
+
+  document.getElementById('deptStats').innerHTML = html;
+}
+
+async function fetchQuestions() {
+  const res = await fetch(scriptURL, { method:'POST', body: JSON.stringify({ action:'getAllQuestions' }) });
+  const data = await res.json();
+  questions = data.questions || [];   // ✅ extract array properly
+  currentIndex = 0;
+  showQuestion();
+  renderDeptSummary();
+}
+
+async function fetchResults() {
+  const res = await fetch(scriptURL, { method:'POST', body: JSON.stringify({ action:'getResults' }) });
+  const data = await res.json();
+  results = data.results || [];
+  renderResultsSummary();
+}
+
+function showQuestion() {
+  if (questions.length === 0) {
+    document.getElementById('qContainer').innerHTML = "<p>No questions available.</p>";
+    return;
+  }
+  const q = questions[currentIndex];
+  document.getElementById('qContainer').innerHTML = `
+    <b>Q${currentIndex+1} (${q.dept})</b><br>
+    <p>${q.q}</p>
+    <div class="grid" style="grid-template-columns: repeat(2, 1fr); gap:10px; margin:10px 0;">
+      <div>A) ${q.options[0]}</div>
+      <div>B) ${q.options[1]}</div>
+      <div>C) ${q.options[2]}</div>
+      <div>D) ${q.options[3]}</div>
+    </div>
+    <b>✔ Correct:</b> ${q.answer}<br>
+    ${q.img ? `<img src="${q.img}" alt="img">` : ''}
+  `;
+  MathJax.typesetPromise();
+}
+
+function nextQuestion() {
+  if (currentIndex < questions.length - 1) {
+    currentIndex++;
+    showQuestion();
+  }
+}
+
+function prevQuestion() {
+  if (currentIndex > 0) {
+    currentIndex--;
+    showQuestion();
+  }
+}
+
+// 🔹 New: Render department summary
+function renderDeptSummary() {
+  if (questions.length === 0) {
+    document.getElementById('deptSummary').innerHTML = "<p>No data yet.</p>";
+    return;
+  }
+
+  const counts = {};
+  questions.forEach(q => {
+    const dept = q.dept || "Unknown";
+    counts[dept] = (counts[dept] || 0) + 1;
+  });
+
+  let html = "";
+  Object.keys(counts).forEach(dept => {
+    html += `
+      <div class="card" style="padding:15px;text-align:center;background:#f9f9ff;">
+        <h4>${dept}</h4>
+        <p><b>${counts[dept]}</b> Questions</p>
+      </div>
+    `;
+  });
+  document.getElementById('deptSummary').innerHTML = html;
+}
+
+// 🔹 Results Summary
+function renderResultsSummary() {
+  if (results.length === 0) {
+    document.getElementById('resultsSummary').innerHTML = "<p>No results yet.</p>";
+    return;
+  }
+
+  const counts = {};
+  results.forEach(r => {
+    // make sure 'dept' exists; if not, fallback to "Unknown"
+    const dept = r.dept?.trim() || "Unknown";
+    counts[dept] = (counts[dept] || 0) + 1;
+  });
+
+  let html = "";
+  Object.keys(counts).forEach(dept => {
+    html += `
+      <div class="card" style="padding:15px;text-align:center;background:#f9f9ff;cursor:pointer"
+           onclick="selectDept('${dept}')">
+        <h4>${dept}</h4>
+        <p><b>${counts[dept]}</b> Students</p>
+      </div>
+    `;
+  });
+  document.getElementById('resultsSummary').innerHTML = html;
+}
+
+
+function selectDept(dept) {
+  selectedDept = dept;
+  document.getElementById('selectedDept').innerText = `Department: ${dept}`;
+  document.getElementById('downloadSection').style.display = 'block';
+}
+
+function downloadDeptResults() {
+  if (!selectedDept) return;
+  
+  const deptResults = results.filter(r => r.dept === selectedDept);
+
+  let csv = "UserName,Name,Dept,Score,Total,Violations,StartTime,EndTime,DurationSec,Answers\n";
+  deptResults.forEach(r => {
+    csv += `"${r.username}","${r.name}","${r.dept}","${r.score}","${r.total}","${r.violations}","${r.startTime}","${r.endTime}","${r.durationSec}","${r.answers}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${selectedDept}_Results.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+</script>
+</body>
+</html>
+
+

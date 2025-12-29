@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Review Answers</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f9fafc;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: linear-gradient(135deg, #007bff, #00c6ff);
+      color: #fff;
+      text-align: center;
+      padding: 18px 12px;
+      border-bottom-left-radius: 20px;
+      border-bottom-right-radius: 20px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header h2 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+    .score-bar {
+      font-size: 1rem;
+      margin-top: 5px;
+      font-weight: 500;
+    }
+
+    .filters {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 12px 0;
+      flex-wrap: wrap;
+    }
+    .filter-btn, .download-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid #007bff;
+      background: #fff;
+      color: #007bff;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all .2s ease;
+    }
+    .filter-btn.active {
+      background: #007bff;
+      color: #fff;
+    }
+    .filter-btn:hover, .download-btn:hover {
+      background: #007bff;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .qtext {
+      font-weight: 600;
+      margin-bottom: 12px;
+      font-size: 1rem;
+      color: #333;
+    }
+    .option {
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin: 6px 0;
+      border: 1px solid #ddd;
+      font-size: 0.95rem;
+    }
+    .option.correct {
+      background: #d4edda;
+      color: #155724;
+      border-color: #a3dca8;
+    }
+    .option.wrong {
+      background: #f8d7da;
+      color: #721c24;
+      border-color: #f0aeb4;
+    }
+    .option.selected {
+      box-shadow: 0 0 0 3px rgba(0,123,255,0.15);
+      border: 2px solid #007bff;
+    }
+    .summary {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: #444;
+      background: #f8f9fa;
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+    img.qimg {
+      max-width: 100%;
+      display: block;
+      margin: 12px 0;
+      border-radius: 8px;
+      border: 1px solid #eee;
+    }
+
+    @media (max-width: 600px) {
+      .qtext { font-size: 0.95rem; }
+      .option { font-size: 0.85rem; padding: 8px 10px; }
+      .summary { font-size: 0.85rem; }
+      header h2 { font-size: 1.1rem; }
+      .score-bar { font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>Review Your Answers</h2>
+    <div id="scoreBar" class="score-bar">Loading...</div>
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="correct">Correct</button>
+      <button class="filter-btn" data-filter="wrong">Wrong</button>
+      <button class="filter-btn" data-filter="unanswered">Unanswered</button>
+      <button class="download-btn" id="downloadBtn">Download PDF</button>
+    </div>
+  </header>
+
+  <div class="container" id="reviewSection">
+    <div id="reviewContainer"></div>
+  </div>
+
+  <!-- html2pdf library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwC9V02YbNUFf-0oN_Ku7fvf2LxD6M8XjoO9QZCAG2IDNxyPVBLGXUzeXdrIkpoy9Uv0Q/exec";
+    const userStr = localStorage.getItem('user');
+    if (!userStr) {
+      alert("Not logged in!");
+      window.location.href = "index.html";
+    }
+    const user = JSON.parse(userStr);
+
+    function escapeHtml(s){
+      if (s === null || s === undefined) return "";
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+                      .replace(/>/g,"&gt;").replace(/"/g,"&quot;")
+                      .replace(/'/g,"&#39;");
+    }
+
+    function findUserAnswer(userAnswers, qIndex, qText, options){
+      if (!userAnswers) return "";
+      if (userAnswers.hasOwnProperty(qText)) return userAnswers[qText];
+      if (userAnswers.hasOwnProperty(qIndex)) return userAnswers[qIndex];
+      if (userAnswers.hasOwnProperty(String(qIndex))) return userAnswers[String(qIndex)];
+      if (userAnswers.hasOwnProperty(String(qIndex+1))) return userAnswers[String(qIndex+1)];
+      if (Array.isArray(userAnswers) && userAnswers[qIndex]) return userAnswers[qIndex];
+      return "";
+    }
+
+    let reviewData = [];
+
+    async function loadReview(){
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "getUserResult", username: user.username })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          document.getElementById("reviewContainer").innerHTML =
+            `<div class="card"><p>${escapeHtml(data.error)}</p></div>`;
+          document.getElementById("scoreBar").innerText = "Review not available";
+          return;
+        }
+
+        reviewData = buildReviewData(data.questions || [], data.answers || {});
+        renderReview("all");
+      } catch (err) {
+        console.error("Fetch error:", err);
+        document.getElementById("reviewContainer").innerHTML =
+          `<div class="card"><p>Failed to load review data.</p></div>`;
+        document.getElementById("scoreBar").innerText = "Error loading";
+      }
+    }
+
+    function buildReviewData(questions, userAnswers){
+      const letters = ["A","B","C","D"];
+      return questions.map((qObj, idx) => {
+        const qText = String(qObj.q || qObj.question || "").trim();
+        const opts = qObj.options || [];
+        const correctRaw = (qObj.answer || qObj.correctText || qObj.correct || "").toString().trim();
+
+        const rawUserAns = findUserAnswer(userAnswers, idx, qText, opts) || "";
+        const userAnsStr = String(rawUserAns).trim();
+
+        let userChosenText = "";
+        if (userAnsStr.length === 1 && letters.includes(userAnsStr.toUpperCase())) {
+          const li = letters.indexOf(userAnsStr.toUpperCase());
+          userChosenText = (opts[li] !== undefined) ? String(opts[li]).trim() : userAnsStr;
+        } else {
+          userChosenText = userAnsStr;
+        }
+
+        let status = "unanswered";
+        if (userChosenText && correctRaw) {
+          status = (userChosenText === correctRaw) ? "correct" : "wrong";
+        }
+
+        return { idx, qText, opts, correctRaw, userChosenText, status, img: qObj.img };
+      });
+    }
+
+    function renderReview(filter){
+      const container = document.getElementById("reviewContainer");
+      container.innerHTML = "";
+
+      let correctCount = 0, totalCount = 0;
+      const letters = ["A","B","C","D"];
+
+      reviewData.forEach(item => {
+        if (filter !== "all" && item.status !== filter) return;
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const qDiv = document.createElement("div");
+        qDiv.className = "qtext";
+        qDiv.innerHTML = `Q${item.idx+1}. ${escapeHtml(item.qText)}`;
+        card.appendChild(qDiv);
+
+        if (item.img) {
+          const img = document.createElement("img");
+          img.className = "qimg";
+          img.src = item.img;
+          card.appendChild(img);
+        }
+
+        item.opts.forEach((opt, optIdx) => {
+          const optText = (opt === null || opt === undefined) ? "" : String(opt).trim();
+          const optDiv = document.createElement("div");
+          optDiv.className = "option";
+          optDiv.innerHTML = `${letters[optIdx]}) ${escapeHtml(optText)}`;
+
+          const isSelected = (item.userChosenText && (item.userChosenText === optText || item.userChosenText === letters[optIdx]));
+          const isCorrect  = (item.correctRaw && (item.correctRaw === optText || item.correctRaw === letters[optIdx]));
+
+          if (isSelected) optDiv.classList.add("selected");
+          if (isCorrect)  optDiv.classList.add("correct");
+          if (isSelected && !isCorrect) optDiv.classList.add("wrong");
+
+          card.appendChild(optDiv);
+        });
+
+        const summary = document.createElement("div");
+        summary.className = "summary";
+        const userDisplay = item.userChosenText ? escapeHtml(item.userChosenText) : "<em>Not Answered</em>";
+        const correctDisplay = item.correctRaw ? escapeHtml(item.correctRaw) : "<em>Not Provided</em>";
+        summary.innerHTML = `<strong>Your Answer:</strong> ${userDisplay}<br><strong>Correct Answer:</strong> ${correctDisplay}`;
+        card.appendChild(summary);
+
+        if (item.correctRaw) totalCount++;
+        if (item.status === "correct") correctCount++;
+
+        container.appendChild(card);
+      });
+
+      document.getElementById("scoreBar").innerText = `Score: ${correctCount} / ${totalCount}`;
+    }
+
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        renderReview(btn.dataset.filter);
+      });
+    });
+
+    // Download button
+    document.getElementById("downloadBtn").addEventListener("click", () => {
+      const reviewElement = document.getElementById("reviewSection");
+      const opt = {
+        margin:       0.5,
+        filename:     `${user.username}_review.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().from(reviewElement).set(opt).save();
+    });
+
+    loadReview();
+  </script>
+</body>
+</html>
+

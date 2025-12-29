@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Instructions</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #6a11cb, #2575fc, #ff512f, #dd2476);
+      background-size: 400% 400%;
+      animation: gradientBG 12s ease infinite;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .card {
+      max-width: 600px;
+      width: 90%;
+      padding: 30px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+      text-align: center;
+      color: #fff;
+      animation: fadeIn 1s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+      font-weight: 600;
+      background: linear-gradient(45deg, #ffe259, #ffa751);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: glow 2s infinite alternate;
+    }
+
+    @keyframes glow {
+      from { text-shadow: 0 0 8px #ffe259; }
+      to { text-shadow: 0 0 18px #ffa751; }
+    }
+
+    ul {
+      text-align: left;
+      margin: 0 auto 20px;
+      padding-left: 20px;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    ul li {
+      margin-bottom: 10px;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(45deg, #ff512f, #dd2476);
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 12px rgba(255,255,255,0.6);
+    }
+
+    @media (max-width: 600px) {
+      .card {
+        padding: 20px;
+      }
+      h2 {
+        font-size: 1.5rem;
+      }
+      ul {
+        font-size: 0.95rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="card" style="max-width:800px;margin:auto;padding:20px;font-family:Arial, sans-serif;line-height:1.6;background:#f9f9f9;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+  <h2 style="text-align:center;color:#2c3e50">📘 Instructions</h2>
+  <hr style="margin:10px 0 20px 0">
+
+  <h3 style="color:#27ae60">📌 Exam Details</h3>
+  <ul style="color:#c0392b">
+    <li><b>Total Questions:</b> 50</li>
+    <li><b>Duration:</b> 90 Minutes</li>
+    <li><b>Mode:</b> Full Screen Only</li>
+  </ul>
+
+  <h3 style="color:#27ae60">📝 General Guidelines</h3>
+  <ul style="color:#c0392b">
+    <li>You must not refresh or close the exam window.</li>
+    <li>Do not switch tabs or minimize the browser, violations will be recorded.</li>
+     <li>Only interact inside the white question palette area (Avoid Long Press)</li>
+    <li>Answer all questions within the given time.</li>
+    <li>Once submitted, you cannot re-login.</li>
+  </ul>
+
+  <h3 style="color:#e74c3c">⚠️ Violation Rules</h3>
+  <ul style="color:#c0392b">
+    <li>Long press on screen</li>
+    <li>Changing tab or window</li>
+    <li>Copying the question</li>
+    <li>Touch outside the Question Palette</li>
+    <li>Minimizing the exam screen</li>
+    <li>Receiving or interacting with notifications</li>
+    <li>Restoring the page after refresh/close</li>
+  </ul>
+
+  <div style="background:#fdecea;color:#b71c1c;padding:12px;border-radius:8px;margin:15px 0;font-weight:bold">
+    🚨 Penalty for Violations:
+    <ul>
+      <li>Each violation will be recorded.</li>
+      <li>If more than <b>20 violations</b> occur, the exam will <b>auto-submit</b>.</li>
+      <li><b>Restoring the page</b> will cause <b>immediate auto-submission</b>.</li>
+    </ul>
+  </div>
+
+  <h3 style="color:#27ae60">✅ Submission Rules</h3>
+  <ul style="color:#c0392b">
+    <li>The system will <b>auto-submit</b> once time is over.</li>
+    <li>You may <b>submit anytime</b> within the given duration.</li>
+  </ul>
+
+  <hr style="margin:20px 0">
+
+  <div style="text-align:center">
+    <button onclick="proceedToTest()" style="background:#2ecc71;color:white;border:none;padding:12px 24px;font-size:16px;border-radius:8px;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,0.15);transition:0.3s">
+      Proceed to Test 🚀
+    </button>
+  </div>
+</div>
+
+
+  <script>
+    function proceedToTest() {
+      if (!localStorage.getItem('user')) {
+        alert("⚠ Please login first!");
+        window.location.href = "index.html";
+        return;
+      }
+      window.location.href = "test.html";
+    }
+  </script>
+</body>
+</html>
+
+

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Secure Online Exam</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* ---------- Theme & layout ---------- */
+    :root{
+      --accent1: #6a5acd;
+      --accent2: #ff6a88;
+      --bg1: linear-gradient(135deg,#f6d365 0%,#fda085 100%);
+      --card-bg: rgba(255,255,255,0.95);
+      --success: #28a745;
+      --warn: #ffc107;
+      --danger: #d32f2f;
+    }
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background: linear-gradient(120deg,#89f7fe 0%,#66a6ff 100%);-webkit-font-smoothing:antialiased}
+    header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:linear-gradient(90deg,var(--accent1),#4e8cff);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,0.12);position:sticky;top:0;z-index:20}
+    header .left {display:flex;gap:14px;align-items:center}
+    header h1{font-size:18px;margin:0}
+    header .user {font-size:12px;opacity:0.95}
+    header .right {text-align:right;font-size:14px}
+    .main {max-width:1100px;margin:22px auto;padding:20px}
+    .card {background:var(--card-bg);border-radius:14px;padding:18px;box-shadow:0 12px 40px rgba(20,30,60,0.08);animation:cardIn .6s ease}
+    @keyframes cardIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+
+    /* palette */
+    .palette {display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+    .pal-btn{width:34px;height:34px;border-radius:50%;border:none;background:#efefef;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-weight:600;box-shadow:0 4px 10px rgba(10,10,30,0.06)}
+    .pal-answered{background:var(--success);color:#fff}
+    .pal-review{background:var(--warn);color:#111}
+    .pal-current{box-shadow:0 6px 18px rgba(0,123,255,0.28);transform:scale(1.06)}
+    .pal-answered-review {
+  background: purple;
+  color: #fff;
+}
+
+    /* question area */
+    .top-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .timer{font-weight:700;color:var(--danger);font-size:16px}
+    .viol-count{font-weight:700;Color:#fff;font-size:20px}
+    .qbox{margin-top:14px}
+    .qtext{font-size:20px;font-weight:700;margin-bottom:14px}
+    .options-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
+    .option{background:#fbfbff;padding:12px;border-radius:10px;border:2px solid transparent;cursor:pointer;transition:all .18s;user-select:none}
+    .option:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(60,80,150,0.06)}
+    .option.selected{border-color:var(--accent1);background:#eef4ff}
+    .meta{display:flex;justify-content:space-between;margin-top:10px;gap:12px;align-items:center}
+    .controls{display:flex;gap:10px}
+    .btn{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:700;box-shadow:0 8px 26px rgba(0,0,0,0.08);transition:transform .12s}
+    .btn:active{transform:translateY(2px)}
+    .btn-primary{background:linear-gradient(90deg,var(--accent1),#3ea0ff);color:#fff}
+    .btn-warning{background:linear-gradient(90deg,#ffb74d,#ff8a65);color:#fff}
+    .btn-success{background:linear-gradient(90deg,#66bb6a,#43a047);color:#fff;width:220px}
+    .review-list{margin-top:16px}
+    .review-item{padding:8px;border-radius:8px;background:#fafafa;margin-bottom:8px;border:1px solid #eee;display:flex;justify-content:space-between;align-items:center;}
+    /* modal */
+    .modal {position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:200;opacity:0;pointer-events:none;transition:opacity .18s}
+    .modal.show{opacity:1;pointer-events:all}
+    .modal .panel{background:#fff;padding:18px;border-radius:12px;width:92%;max-width:760px;max-height:80vh;overflow:auto}
+    .small{font-size:13px;color:#666}
+
+    /* responsiveness */
+     @media (max-width:720px){
+    .options-grid {
+  grid-template-columns: 1fr;
+   }
+
+  header {
+  padding: 10px;
+  }
+
+  .btn-success {
+   width: 100%;
+  }
+
+/* Force 7 buttons per row in palette */
+.palette {
+  display: grid;  
+  grid-template-columns: repeat(7, 1fr); /* exactly 7 per row */
+  gap: 8px;
+}
+
+.pal-btn {
+  width: 100%;  /* button auto-sizes to grid cell */
+  height: auto; 
+  aspect-ratio: 1 / 1; /* keeps perfect circle */
+  }
+    
+ }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="left">
+    <h1>🌟 Industry Specific - Mock Test</h1>
+    <div class="small" style="margin-left:6px;color:#fff">Full-screen required • 90 min • Max 20 violations</div>
+  </div>
+  <div class="right">
+    <div class="user">👤 <span id="displayName">Student</span> &nbsp; | &nbsp; 🏫 <span id="displayDept">Dept</span></div>
+    <div style="margin-top:6px">
+      <span class="timer">⏳ <span id="timer">90:00</span></span>
+      &nbsp;&nbsp;
+      <span class="viol-count">⚠ <span id="violCount">0</span> / 20</span>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <div class="card">
+    <div class="top-row">
+      <div style="flex:1">
+        <div class="small">Question Palette</div>
+        <div class="palette" id="palette"></div>
+        <div style="min-width:220px;text-align:right"></div>
+        <div class="small">Progress</div>
+        <div id="progressText">0 / 0 answered</div>
+        <div style="height:6px;background:#eee;border-radius:6px;margin-top:8px">
+          <div id="progressBar" style="width:0%;height:6px;background:linear-gradient(90deg,var(--accent1),var(--accent2));border-radius:6px"></div>
+        </div>
+      </div>
+    </div>
+    
+
+    <div class="qbox">
+      <div id="qContainer">
+        <!-- question injected here -->
+      </div>
+
+      <div class="meta">
+        <div class="controls">
+          <button class="btn btn-primary" id="prevBtn">← Prev</button>
+          <button class="btn btn-primary" id="saveNextBtn">Save & Next</button>
+          <button class="btn btn-warning" id="reviewNextBtn">Mark for Review & Next</button>
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+          <button class="btn btn-success" id="reviewBtn">Review All</button>
+          <button class="btn btn-success" id="submitBtn" style="display:none">Save & Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- REVIEW MODAL -->
+<div id="reviewModal" class="modal" role="dialog" aria-hidden="true">
+  <div class="panel">
+    <h3>Review Questions</h3>
+    <p class="small">Click any item to jump to that question. Green = answered • Yellow = review • Gray = unanswered</p>
+    <div id="reviewList" class="review-list"></div>
+    <div style="text-align:right;margin-top:12px">
+      <button class="btn" id="closeReview">Close</button>
+      <button class="btn btn-success" id="finalSubmit">Submit All</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- CONFIG ---------- */
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwC9V02YbNUFf-0oN_Ku7fvf2LxD6M8XjoO9QZCAG2IDNxyPVBLGXUzeXdrIkpoy9Uv0Q/exec";
+/* ---------- STATE ---------- */
+const EXAM_SECONDS = 90 * 60; // 60 minutes = 3600 seconds
+let questions = [];           // array fetched from server
+let currentIndex = 0;
+let answers = {};             // index -> 'A'/'B'/'C'/'D'
+let reviewMarks = {};         // index -> true
+let violCount = 0;
+let started = false;
+let startTimeISO = null;
+let timerSecs = EXAM_SECONDS;
+let timerHandle = null;
+let submitting = false;
+
+/* ---------- UTIL ---------- */
+function $(id){ return document.getElementById(id); }
+function safeText(s){ return (s||"")+"".replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ---------- INIT (get user) ---------- */
+// ✅ First check session — redirect before any prompt
+let username, fullName, userDept;
+
+const userStr = localStorage.getItem('user');
+if (!userStr) {
+  window.location.href = "index.html";
+} else {
+  const user = JSON.parse(userStr);
+  username = user.username;
+  fullName = user.name;
+  userDept = user.dept;
+
+  $('displayName').innerText = fullName || username;
+  $('displayDept').innerText = userDept;
+}
+
+
+/* ---------- Violations & Security ---------- */
+MAX_VIOLATIONS = 20;
+function addViolation(reason){
+  if (submitting) return;
+  violCount++;
+  $('violCount').innerText = violCount;
+  showToast((reason||'Violation') + " — Remaining: " + Math.max(0, MAX_VIOLATIONS - violCount));
+  if (violCount >= MAX_VIOLATIONS) {
+    // auto submit
+    showToast("Maximum violations reached — auto-submitting...");
+    setTimeout(()=> submitAll('violations'), 800);
+  }
+}
+
+window.addEventListener('beforeunload', function(e){
+  if (submitting) return;
+  // --- compute final score ---
+  let score = 0;
+  for (let i=0;i<questions.length;i++){
+    const sel = answers[i];
+    if (!sel) continue;
+    const mapping = { A:0,B:1,C:2,D:3 };
+    const idx = mapping[sel];
+    if (idx !== undefined) {
+      const selectedText = (questions[i].options[idx]?.text || questions[i].options[idx] || "").trim();
+      const correctText = (questions[i].correctText || questions[i].answer || "").trim();
+      if (selectedText === correctText) score++;
+    }
+  }
+
+  const payload = {
+    action: 'saveResult',
+    username: username,   // pass actual username
+    name: fullName,       // full name 
+    dept: userDept,
+    answers: answers,
+    score: score,
+    total: questions.length,
+    violations: violCount,
+    startTime: startTimeISO,
+    endTime: new Date().toISOString(),
+    durationSec: EXAM_SECONDS - timerSecs,
+    endReason: 'refresh'
+  };
+
+  try {
+    // ✅ ensure result is sent even if page closes
+    navigator.sendBeacon(SCRIPT_URL, JSON.stringify(payload));
+  } catch(err) {
+    localStorage.setItem('pending_result', JSON.stringify(payload));
+  }
+
+  // ⚠ clear session AFTER sending
+  setTimeout(() => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('dept');
+    localStorage.removeItem('role');
+  }, 300);
+
+  // trigger browser "leave" message
+  e.preventDefault();
+  e.returnValue = '';
+});
+
+
+/* disable common copy/paste/selection/long-press/contextmenu etc. */
+document.addEventListener('copy', e => { e.preventDefault(); addViolation('Copy not allowed'); });
+document.addEventListener('paste', e => { e.preventDefault(); addViolation('Paste not allowed'); });
+document.addEventListener('cut', e => { e.preventDefault(); addViolation('Cut not allowed'); });
+document.addEventListener('contextmenu', e => { e.preventDefault(); addViolation('Right-click not allowed'); });
+document.addEventListener('selectstart', e => { /* allow selection inside inputs if needed */ if(!e.target.closest('input,textarea')) { e.preventDefault(); addViolation('Text selection not allowed'); } });
+
+/* prevent F5 / Ctrl+R refresh and block Ctrl/Cmd+C/V */
+document.addEventListener('keydown', e => {
+  if ((e.key === 'F5') || ((e.ctrlKey||e.metaKey) && e.key === 'r')) {
+    e.preventDefault(); addViolation('Refresh not allowed');
+    return false;
+  }
+  if ((e.ctrlKey||e.metaKey) && (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'v')) {
+    e.preventDefault(); addViolation('Copy/Paste shortcut not allowed');
+    return false;
+  }
+  // PrintScreen detection not reliable in browsers; skip.
+});
+
+/* long-press detection for mobile (exclude taps on inputs/buttons) */
+let longPressTimer = null;
+document.addEventListener('touchstart', e => {
+  if (e.target.closest('input,textarea,button')) return;
+  longPressTimer = setTimeout(()=> { addViolation('Long press detected'); }, 700);
+});
+document.addEventListener('touchend', e => { if(longPressTimer) clearTimeout(longPressTimer); longPressTimer = null; });
+document.addEventListener('touchmove', e => { if(longPressTimer) clearTimeout(longPressTimer); longPressTimer = null; });
+
+// Already there
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) addViolation('Tab switch / minimised detected');
+});
+
+// NEW: detect switching to another app / window
+window.addEventListener('blur', () => {
+  addViolation('Window lost focus (switched apps/minimized)');
+});
+
+// Optional: regain focus logging (for debugging)
+window.addEventListener('focus', () => {
+  console.log('Window focus regained');
+});
+
+document.addEventListener("keydown", (e) => {
+  const active = document.activeElement;
+  if (active.tagName !== "INPUT" && active.tagName !== "TEXTAREA") {
+    addViolation("Typing outside allowed exam fields (possible floating msg).");
+  }
+});
+/* fullscreen exit detection */
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) addViolation('Exit fullscreen');
+});
+
+/* request fullscreen on first user gesture */
+document.addEventListener('click', function onFirstClick(){
+  document.removeEventListener('click', onFirstClick);
+  document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(()=>{});
+});
+
+document.addEventListener('keydown', e => {
+  // Refresh keys
+  if (e.key === 'F5' || ((e.ctrlKey||e.metaKey) && e.key.toLowerCase() === 'r')) {
+    e.preventDefault();
+    addViolation('Refresh not allowed');
+    return false;
+  }
+
+  // Copy / Paste / Cut
+  if ((e.ctrlKey||e.metaKey) && ['c','v','x','a'].includes(e.key.toLowerCase())) {
+    e.preventDefault();
+    addViolation('Copy/Paste/Cut not allowed');
+    return false;
+  }
+
+  // Print Screen (⚠️ can’t block fully, but detect keydown)
+  if (e.key === 'PrintScreen') {
+    e.preventDefault();
+    addViolation('Screenshot not allowed');
+    return false;
+  }
+});
+
+
+/* ---------- UI helpers ---------- */
+function showToast(msg){
+  // small ephemeral top-right toast (simple)
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.position='fixed'; t.style.top='16px'; t.style.right='16px';
+  t.style.background='rgba(0,0,0,0.75)'; t.style.color='#fff'; t.style.padding='10px 12px';
+  t.style.borderRadius='8px'; t.style.zIndex=9999; t.style.fontSize='13px';
+  document.body.appendChild(t);
+  setTimeout(()=> t.style.opacity = '0', 1800);
+  setTimeout(()=> document.body.removeChild(t), 2400);
+}
+
+/* ---------- Fetch Questions ---------- */
+async function fetchQuestions(){
+  try {
+    const res = await fetch(`${SCRIPT_URL}?dept=${encodeURIComponent(userDept)}`, {
+      method: 'GET'
+    });
+    const data = await res.json();
+
+    if (!data || !data.questions) { 
+      throw new Error('No questions returned'); 
+    }
+    questions = data.questions;
+    startExam();
+  } catch(err) {
+    console.error('Failed to load questions:', err);
+    alert('Failed to load questions from server. Check console and script URL.');
+  }
+}
+
+
+/* ---------- Render Palette ---------- */
+function renderPalette(){
+  const pal = $('palette'); 
+  pal.innerHTML = '';
+
+  for (let i=0; i<questions.length; i++){
+    const btn = document.createElement('button'); 
+    btn.className = 'pal-btn';
+    btn.textContent = i+1;
+
+    if (answers.hasOwnProperty(i) && reviewMarks[i]) {
+      // Answered + Marked for Review → Purple
+      btn.classList.add('pal-answered-review');
+    } 
+    else if (answers.hasOwnProperty(i)) {
+      // Answered only → Green
+      btn.classList.add('pal-answered');
+    } 
+    else if (reviewMarks[i]) {
+      // Marked for Review only → Yellow
+      btn.classList.add('pal-review');
+    } 
+    // else → default grey (unanswered)
+
+    if (i === currentIndex) btn.classList.add('pal-current');
+
+    btn.onclick = () => { 
+      currentIndex = i; 
+      renderQuestion(); 
+    };
+
+    pal.appendChild(btn);
+  }
+
+  updateProgress();
+}
+    
+
+
+/* ---------- Render Question ---------- */
+function renderQuestion(){
+  if (!questions.length) return;
+  const q = questions[currentIndex];
+  const container = $('qContainer');
+
+  container.innerHTML = `
+    <div class="qtext">Q${currentIndex+1}. ${safeText(q.question || q.q || '')}</div>
+    ${ q.image ? `<div style="margin-bottom:12px"><img src="${safeText(q.image)}" style="max-width:220px;border-radius:8px"></div>` : '' }
+    <div class="options-grid">
+      <div class="option ${answers[currentIndex]==='A'?'selected':''}" data-opt="A">
+        A) ${safeText(q.options[0]?.text || q.options[0] || '')}
+      </div>
+      <div class="option ${answers[currentIndex]==='B'?'selected':''}" data-opt="B">
+        B) ${safeText(q.options[1]?.text || q.options[1] || '')}
+      </div>
+      <div class="option ${answers[currentIndex]==='C'?'selected':''}" data-opt="C">
+        C) ${safeText(q.options[2]?.text || q.options[2] || '')}
+      </div>
+      <div class="option ${answers[currentIndex]==='D'?'selected':''}" data-opt="D">
+        D) ${safeText(q.options[3]?.text || q.options[3] || '')}
+      </div>
+    </div>
+  `;
+
+  // attach click handlers
+  [...container.querySelectorAll('.option')].forEach(el=>{
+    el.onclick = () => {
+  const opt = el.getAttribute('data-opt');
+  answers[currentIndex] = opt;
+
+  // ✅ Clear review mark if question is answered
+  if (reviewMarks[currentIndex]) {
+    delete reviewMarks[currentIndex];
+  }
+
+  renderQuestion();
+  renderPalette();
+};
+
+
+  });
+
+  // show/hide submit button
+  $('submitBtn').style.display = (currentIndex === questions.length-1) ? 'inline-block' : 'none';
+  renderPalette();
+}
+
+
+/* ---------- Progress ---------- */
+function updateProgress(){
+  const answered = Object.keys(answers).length;
+  $('progressText').innerText = `${answered} / ${questions.length} answered`;
+  const pct = Math.round((answered / questions.length) * 100);
+  $('progressBar').style.width = pct + '%';
+}
+
+/* ---------- Navigation ---------- */
+$('prevBtn').addEventListener('click', ()=> {
+  if (currentIndex > 0) { currentIndex--; renderQuestion(); }
+});
+$('saveNextBtn').addEventListener('click', ()=> {
+  // ✅ If answered, remove review mark
+  if (answers[currentIndex]) {
+    delete reviewMarks[currentIndex];
+  }
+
+  if (currentIndex < questions.length-1) { 
+    currentIndex++; 
+    renderQuestion(); 
+  }
+});
+
+$('reviewNextBtn').addEventListener('click', ()=> {
+  reviewMarks[currentIndex] = true;
+  if (currentIndex < questions.length-1) { currentIndex++; renderQuestion(); }
+});
+$('reviewBtn').addEventListener('click', ()=> { showReviewModal(); });
+$('submitBtn').addEventListener('click', ()=> { submitAll('manual'); });
+
+/* ---------- Review Modal ---------- */
+function showReviewModal(){
+  const modal = $('reviewModal'); modal.classList.add('show');
+  const list = $('reviewList'); list.innerHTML = '';
+  for (let i=0;i<questions.length;i++){
+    const div = document.createElement('div'); div.className = 'review-item';
+    const left = document.createElement('div');
+    left.innerHTML = `<strong>Q${i+1}</strong> &nbsp; <span class="small">${(questions[i].question || '').slice(0,80)}${(questions[i].question||'').length>80?'...':''}</span>`;
+    const right = document.createElement('div');
+    if (answers[i]) right.innerHTML = `<span style="color:var(--success)">${answers[i]}</span>`;
+    else right.innerHTML = `<span style="color:#777">Not Answered</span>`;
+    if (reviewMarks[i]) right.innerHTML += ' <span style="color:var(--warn)"> • Review</span>';
+    div.appendChild(left); div.appendChild(right);
+    div.onclick = ()=> { currentIndex = i; modal.classList.remove('show'); renderQuestion(); };
+    list.appendChild(div);
+  }
+}
+$('closeReview').addEventListener('click', ()=> $('reviewModal').classList.remove('show'));
+$('finalSubmit').addEventListener('click', ()=> { $('reviewModal').classList.remove('show'); submitAll('final-review'); });
+
+/* ---------- Timer ---------- */
+function startTimer(){
+  if (timerHandle) clearInterval(timerHandle);
+  timerHandle = setInterval(()=>{
+    const m = Math.floor(timerSecs/60);
+    const s = timerSecs % 60;
+    $('timer').innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if (timerSecs <= 0) {
+      clearInterval(timerHandle);
+      submitAll('timeout');
+    }
+    timerSecs--;
+  }, 1000);
+}
+
+/* ---------- Submit ---------- */
+async function submitAll(endReason){
+  if (submitting) return;
+  submitting = true;
+  if (timerHandle) clearInterval(timerHandle);
+
+  const endTimeISO = new Date().toISOString();
+  const startISO = startTimeISO || new Date().toISOString();
+  const durationSec = EXAM_SECONDS - timerSecs;
+
+  // map answers to { "Question": "Answer text" } format
+  const formattedAnswers = {};
+  let score = 0;
+
+  questions.forEach((q, i) => {
+    const sel = answers[i];
+    const questionText = q.question || q.q || `Q${i+1}`;
+    if (sel) {
+      const mapping = { A:0, B:1, C:2, D:3 };
+      const idx = mapping[sel];
+      const answerText = q.options[idx]?.text || q.options[idx] || "";
+      formattedAnswers[questionText] = answerText;
+
+      // ✅ calculate score
+      const correctText = (q.correctText || q.answer || "").trim();
+      if (answerText.trim() === correctText) score++;
+    } else {
+      formattedAnswers[questionText] = "";
+    }
+  });
+
+  const payload = {
+    action: 'saveResult',
+    username: username,
+    name: fullName,
+    dept: userDept,
+    answers: formattedAnswers,  // ✅ Question → Answer text
+    score: score,
+    total: questions.length,
+    violations: violCount,
+    timeLeft: timerSecs,
+    startTime: startISO,
+    endTime: endTimeISO,
+    durationSec: durationSec,
+    endReason: endReason || 'manual'
+  };
+  
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      //headers: { "Content-Type": "application/json" },   // ✅ FIXED
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!data || data.error) throw new Error(data?.message || 'Server error');
+
+    document.querySelector('.main').innerHTML = `
+      <div class="card" style="text-align:center">
+        <h2>✅ Thank you for submitting the test</h2>
+        <p class="small">Name: <strong>${fullName}</strong> | Dept: <strong>${userDept}</strong></p>
+      </div>
+    `;
+    localStorage.removeItem('pending_result');
+    // inside submitAll() after success
+localStorage.removeItem('pending_result');
+localStorage.removeItem('user');
+localStorage.removeItem('dept');
+localStorage.removeItem('role');
+
+setTimeout(() => {
+  window.location.href = "index.html";
+}, 1500);
+
+  } catch (err) {
+    console.error('Submit failed, saving pending locally', err);
+    localStorage.setItem('pending_result', JSON.stringify(payload));
+    alert('⚠ Submission failed — result saved locally. It will retry when network is available.');
+    document.querySelector('.main').innerHTML = `<div class="card"><h2>Result Saved Locally</h2><p>Please contact admin.</p></div>`;
+  }
+}
+
+/* ---------- Start exam flow ---------- */
+function startExam(){
+  startTimeISO = new Date().toISOString();
+  // initialize
+  renderPalette();
+  renderQuestion();
+  startTimer();
+  started = true;
+}
+
+/* ---------- On load: fetch questions ---------- */
+window.addEventListener('load', ()=> {
+  // if pending submission exists, try to send it once background
+  const pend = localStorage.getItem('pending_result');
+  if (pend) {
+    // attempt background retry
+    (async ()=>{
+      try {
+        const payload = JSON.parse(pend);
+        const r = await fetch(SCRIPT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        
+
+        const resp = await r.json();
+        if (resp && !resp.error) localStorage.removeItem('pending_result');
+      } catch(e){ /* ignore */ }
+    })();
+  }
+  // fetch questions from server
+  fetchQuestions();
+});
+
+/* ---------- Prevent copy of page HTML via selection+copy overlay attempts handled above ---------- */
+/* ---------- END ---------- */
+</script>
+</body>
+</html>
+
+
+
+
+
